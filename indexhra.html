@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Le Fler – hra kosmetička: 10 případů</title>
+<style>
+:root{
+  --bg:#171116;--panel:#251a21;--panel2:#312129;--line:#70434f;
+  --text:#f7ead9;--muted:#c9ac9f;--accent:#c56b80;--accent2:#f0d6b1;
+  --good:#9ed39a;--bad:#ff9f9f;--warn:#f4c979;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{padding:20px}.game{max-width:900px;margin:auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:24px;letter-spacing:.3px}.score{background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:10px 15px;font-weight:800;font-size:18px}.score span{color:var(--accent2)}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}h2,h3{margin-top:0}.muted{color:var(--muted)}
+.client{font-size:20px;line-height:1.5;border-left:5px solid var(--accent);padding-left:14px}.case-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.case-card{border:2px solid var(--line);background:#2b1d24;border-radius:12px;padding:16px}.case-card h3{margin-bottom:8px}.case-card p{color:var(--muted);line-height:1.4}.case-card button{width:100%}
+.question-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}button,.choice{border:2px solid #8d5361;background:#a85c6e;color:white;border-radius:10px;padding:13px 14px;text-align:left;font-size:15px;font-weight:700;cursor:pointer;min-height:48px}button:hover,.choice:hover{background:#bd6c7d}button:disabled{opacity:.42;cursor:not-allowed}.secondary{background:#3b2931;border-color:#7e5c55;color:#f4d8b7}.secondary:hover{background:#47323c}
+.answerBox{background:#1e151a;border:1px solid #65424c;border-radius:10px;padding:14px;margin-top:14px;line-height:1.5}.consultLog{background:#20161b;border:2px solid #65424c}.consultLog h3{margin-bottom:6px}.logIntro{border-left:4px solid var(--accent);padding:10px 12px;background:#2b1d24;border-radius:0 9px 9px 0;line-height:1.45;margin:10px 0 14px}.logEntry{padding:11px 0;border-top:1px solid #543740;line-height:1.45}.logEntry:first-child{border-top:0}.logRole{color:var(--accent2);font-weight:800}.logEmpty{color:var(--muted);font-style:italic}.delta{font-weight:800;margin-top:8px}.plus{color:var(--good)}.minus{color:var(--bad)}.zero{color:var(--warn)}.progress{color:var(--muted);font-size:14px;margin-bottom:10px}.hidden{display:none!important}.options{display:grid;gap:10px}.optionBtn{width:100%}.ingredient-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.check{display:flex;align-items:center;gap:10px;background:#2b1d24;border:2px solid #70434f;border-radius:10px;padding:12px;min-height:48px}.check input{width:20px;height:20px;accent-color:#bd6c7d}.feedback{margin-top:14px;padding:12px;border-radius:10px;background:#21171c;line-height:1.5}.resultScore{font-size:42px;font-weight:900;color:var(--accent2);margin:8px 0}.resultTitle{font-size:22px;font-weight:800}.restart{display:inline-block;margin-top:10px}.caseName{color:var(--accent2);font-weight:800}
+@media(max-width:650px){body{padding:10px}.question-grid,.ingredient-grid,.case-grid{grid-template-columns:1fr}.brand{font-size:20px}.client{font-size:17px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<div class="game" id="game">
+  <div class="topbar">
+    <div class="brand">LE FLER · HRA KOSMETIČKA</div>
+    <div class="score">Skóre: <span id="score">0</span> / 100</div>
+  </div>
+
+  <section class="card" id="caseSelect">
+    <h2>Vyberte klientku · 10 případů</h2>
+    <p class="muted">Každá klientka má jiný problém a několik zavádějících stop. Některé případy jsou schválně záludné.</p>
+    <div class="case-grid" id="caseGrid"></div>
+  </section>
+
+  <section class="card hidden" id="intro">
+    <div class="caseName" id="caseName"></div>
+    <h2>Klientka přichází na konzultaci</h2>
+    <p class="client" id="clientIntro"></p>
+    <p class="muted">Vyberte správné otázky, stanovte hlavní problém, doporučte ošetření a domácí péči.</p>
+    <button type="button" id="startBtn">Začít konzultaci</button>
+  </section>
+
+  <section class="card consultLog hidden" id="consultLog">
+    <h3>Záznam konzultace</h3>
+    <p class="muted">Příběh klientky zůstává po celou dobu na očích.</p>
+    <div class="logIntro" id="logIntro"></div>
+    <div id="logEntries"><div class="logEmpty">Zatím jste nepoložili žádnou otázku.</div></div>
+  </section>
+
+  <section class="card hidden" id="questionsStage">
+    <h2>1. Konzultace</h2>
+    <div class="progress">Můžete položit maximálně 4 otázky. Položeno: <span id="askedCount">0</span> / 4</div>
+    <h3>Na co se klientky zeptáte?</h3>
+    <div class="question-grid" id="questionGrid"></div>
+    <div class="answerBox hidden" id="clientAnswer"></div>
+    <button type="button" class="secondary" id="diagnoseBtn" style="margin-top:14px">Mám dost informací → stanovit diagnózu</button>
+  </section>
+
+  <section class="card hidden" id="diagnosisStage">
+    <h2>2. Stanovte hlavní problém</h2>
+    <p>Co je podle vás u této klientky hlavní příčinou obtíží?</p>
+    <div class="options" id="diagnosisOptions"></div>
+    <div class="feedback hidden" id="diagnosisFeedback"></div>
+  </section>
+
+  <section class="card hidden" id="treatmentStage">
+    <h2>3. Vyberte ošetření</h2>
+    <p>Jaké salonní ošetření klientce doporučíte jako první?</p>
+    <div class="options" id="treatmentOptions"></div>
+    <div class="feedback hidden" id="treatmentFeedback"></div>
+  </section>
+
+  <section class="card hidden" id="homeStage">
+    <h2>4. Domácí péče</h2>
+    <p>Vyberte přesně <strong>3 účinné látky</strong>, které považujete za vhodné.</p>
+    <div class="ingredient-grid" id="ingredientGrid"></div>
+    <button type="button" id="finishBtn">Vyhodnotit domácí péči</button>
+    <div class="feedback hidden" id="homeFeedback"></div>
+  </section>
+
+  <section class="card hidden" id="resultStage">
+    <h2>Výsledek konzultace</h2>
+    <div class="resultScore"><span id="finalScore">0</span> / 100</div>
+    <div class="resultTitle" id="resultTitle"></div>
+    <div class="feedback" id="resultText"></div>
+    <button type="button" class="restart" id="restartBtn">Vybrat jinou klientku</button>
+  </section>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+
+const cases={
+ dehydration:{
+  name:'Případ 1 · Mastí se, ale pne',
+  preview:'Klientka si myslí, že má mastnou pleť. Vaším úkolem je zjistit, co jí skutečně chybí.',
+  intro:'„Poslední dobou se mi pleť dost mastí, ale zároveň mám po umytí pocit, že je úplně stažená.“',
+  questions:[
+   {q:'Jak dlouho máte pocit pnutí?',a:'Je to hlavně poslední dobou. Dřív jsem takový problém neměla.',pts:10},
+   {q:'Jak se pleť cítí po umytí?',a:'Hodně pne. Mám potřebu si hned dát nějaký krém.',pts:10},
+   {q:'Co používáte po čištění pleti?',a:'Většinou jen lehké sérum. Hutné krémy moc nepoužívám, protože se bojím, že se budu víc mastit.',pts:10},
+   {q:'Co vám na pleti vadí nejvíc?',a:'Pnutí a unavený vzhled. Chtěla bych hlavně, aby byla hydratovanější.',pts:8},
+   {q:'Mastí se vám pleť i během dne?',a:'Ano, hlavně čelo a nos. Proto jsem si myslela, že mám mastnou pleť.',pts:5},
+   {q:'Máte černé tečky?',a:'Trochu na nose, ale to není to, co mi vadí nejvíc.',pts:2},
+   {q:'Jakou značku kosmetiky používáte?',a:'Různé značky. Nic konkrétního dlouhodobě.',pts:0},
+   {q:'Jaký používáte parfém?',a:'To asi s pletí moc nesouvisí, ne?',pts:-5}
+  ],
+  diagnoses:[
+   {label:'Dehydratovaná pleť',pts:30,correct:true,msg:'Správně. Mastný povrch nevylučuje nedostatek vody v pokožce.'},
+   {label:'Suchá pleť',pts:10,msg:'Částečně správný směr, ale klientka nemá typickou dlouhodobě suchou pleť.'},
+   {label:'Mastná pleť',pts:-15,msg:'Mastnota je zde zavádějící stopa. Klíčové je pnutí a nedávný vznik problému.'},
+   {label:'Citlivá pleť',pts:0,msg:'Citlivost zde není hlavním problémem.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Několik černých teček nestačí pro závěr, že hlavním problémem je akné.'}
+  ],
+  treatments:[
+   {label:'Hydratační kosmetické ošetření / ProSkin na míru',pts:20,correct:true,msg:'Správně. Cílem je dodat vodu a podpořit její udržení v pokožce.'},
+   {label:'Výživné regenerační ošetření pro lipidně suchou pleť',pts:8,msg:'Není to úplně mimo, ale hlavním problémem je zde dehydratace, ne primárně nedostatek lipidů.'},
+   {label:'Hloubkové čištění',pts:-10,msg:'Klientka nemá jako hlavní problém ucpané póry.'},
+   {label:'Intenzivní kyselinový peeling',pts:-15,msg:'To by mohlo pnutí a narušenou hydrataci ještě zhoršit.'},
+   {label:'Dermatolog',pts:0,msg:'V tomto modelovém případě nejsou přítomny varovné známky vyžadující dermatologa.'}
+  ],
+  ingredients:[
+   {label:'Glycerin',good:true},{label:'Kyselina hyaluronová',good:true},{label:'Panthenol',good:true},{label:'Beta-glukan',good:true},
+   {label:'Kyselina salicylová',good:false},{label:'Silný retinoid',good:false},{label:'Vysoká koncentrace AHA',good:false},{label:'Alkoholový vysušující toner',good:false}
+  ],
+  final:'Dehydratovaná pleť → Hydratační kosmetické ošetření / ProSkin na míru → glycerin, kyselina hyaluronová, panthenol nebo beta-glukan.',
+  lowHint:'U této klientky bylo důležité nenechat se zmást mastnotou. Klíčové byly pnutí, nedávný vznik problému a nedostatečná hydratace.'
+ },
+ barrier:{
+  name:'Případ 2 · Pleť pálí a červená',
+  preview:'Klientka chce „něco silného na vyčištění“, ale skutečný problém může být úplně jinde.',
+  intro:'„Poslední týdny mě pleť pálí, občas červená a mám pocit, že už na ni skoro nic nemůžu dát.“',
+  questions:[
+   {q:'Kdy se pálení a zarudnutí začalo objevovat?',a:'Asi před třemi týdny. Předtím jsem tak citlivou pleť neměla.',pts:10},
+   {q:'Používáte doma kyseliny, peeling nebo retinoid?',a:'Ano. Mám retinoid a k tomu dvakrát až třikrát týdně kyselinový peeling.',pts:10},
+   {q:'Jak často střídáte aktivní séra?',a:'Docela často. Mám několik sér a snažím se je různě kombinovat, aby pleť vypadala lépe.',pts:10},
+   {q:'Je zarudnutí trvalé nebo jsou vidět cévky?',a:'Ne, cévky nevidím. Zarudnutí přijde hlavně po kosmetice nebo po umytí a pak zase ustoupí.',pts:10},
+   {q:'Loupe se nebo pne?',a:'Ano, hlavně kolem nosu a na tvářích mám pocit suchosti a občas se trochu loupe.',pts:6},
+   {q:'Máte černé tečky?',a:'Pár na nose ano, proto jsem chtěla něco silnějšího na vyčištění.',pts:1},
+   {q:'Jaký máte typ make-upu?',a:'Tekutý, ale používám ho jen občas.',pts:0},
+   {q:'Chcete při ošetření silný peeling?',a:'Myslela jsem, že by mi právě silný peeling mohl pomoct.',pts:-5}
+  ],
+  diagnoses:[
+   {label:'Narušená kožní bariéra / podrážděná citlivá pleť',pts:30,correct:true,msg:'Správně. Nově vzniklé pálení, zarudnutí a kombinace retinoidu s častou exfoliací ukazují na přetíženou bariéru.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Několik komedonů není hlavní problém. Převládá podráždění a narušení bariéry.'},
+   {label:'Rosacea',pts:5,msg:'Zarudnutí je důležité sledovat, ale zde není trvalé a klientka nemá viditelné cévky. Data víc ukazují na podráždění.'},
+   {label:'Suchá pleť',pts:8,msg:'Suchost a olupování jsou přítomné, ale vznikly sekundárně při přetížení aktivní péčí.'},
+   {label:'Pigmentace',pts:-10,msg:'Pigmentace není hlavní stížností ani nálezem této klientky.'}
+  ],
+  treatments:[
+   {label:'Zklidňující kosmetické ošetření na míru s podporou bariéry',pts:20,correct:true,msg:'Správně. První krok je zklidnit pleť a obnovit kožní bariéru bez agresivní exfoliace.'},
+   {label:'Intenzivní kyselinový peeling',pts:-20,msg:'To je přesně postup, který by mohl současné pálení a zarudnutí zhoršit.'},
+   {label:'Hloubkové čištění',pts:-8,msg:'Komedony jsou vedlejší problém. Prioritou je teď zklidnění a obnova bariéry.'},
+   {label:'SQT Nourishing',pts:5,msg:'Regenerace může být zajímavá později podle stavu pleti, ale v tomto modelu volíme nejdřív co nejšetrnější bariérové ošetření.'},
+   {label:'Dermatolog jako první krok',pts:3,msg:'Odborné vyšetření by bylo vhodné při trvalém zarudnutí, cévkách nebo zánětlivých projevech. Tady zatím nejsou jasné varovné známky.'}
+  ],
+  ingredients:[
+   {label:'Ceramidy',good:true},{label:'Panthenol',good:true},{label:'Beta-glukan',good:true},{label:'Centella asiatica',good:true},{label:'Skvalan',good:true},
+   {label:'Vysoká koncentrace AHA',good:false},{label:'Silný retinoid',good:false},{label:'Alkoholový vysušující toner',good:false}
+  ],
+  final:'Narušená kožní bariéra / podrážděná citlivá pleť → Zklidňující kosmetické ošetření na míru → ceramidy, panthenol, beta-glukan, centella asiatica nebo skvalan.',
+  lowHint:'Klíčovou stopou byla nově vzniklá citlivost spolu s retinoidem, častou exfoliací a střídáním aktivních sér. V takové chvíli není cílem pleť „vyčistit silněji“, ale nejdřív zklidnit bariéru.'
+ },
+ acne:{
+  name:'Případ 3 · Pupínky pořád dokola',
+  preview:'Klientka řeší pupínky na bradě a má pocit, že potřebuje silnější kosmetiku. Je ale opravdu problém jen v mastnotě?',
+  intro:'„Je mi 32 a pořád se mi dělají pupínky, hlavně na bradě. Už mě nebaví kupovat další kosmetiku na akné.“',
+  questions:[
+   {q:'Kde se pupínky nejčastěji objevují?',a:'Hlavně na bradě a kolem čelisti. Tváře mám přitom spíš sušší.',pts:10},
+   {q:'Jsou pupínky spíš povrchové, nebo hluboké a bolestivé?',a:'Většinou menší zanícené pupínky. Občas je některý citlivější, ale nebývají hluboko pod kůží.',pts:10},
+   {q:'Jak pleť doma čistíte?',a:'Ráno i večer gelem na problematickou pleť. Když se mi pupínky zhorší, čistím ji ještě důkladněji.',pts:8},
+   {q:'Používáte něco, co pleť vysušuje?',a:'Ano, mám silné lokální sérum a někdy alkoholový toner, protože nechci, aby se pleť mastila.',pts:10},
+   {q:'Má zhoršení nějaký pravidelný rytmus?',a:'Někdy je to horší před menstruací, ale pupínky se mi vracejí průběžně.',pts:6},
+   {q:'Mastí se vám celý obličej?',a:'Ne. Nos a čelo trochu ano, ale tváře skoro vůbec.',pts:3},
+   {q:'Používáte make-up?',a:'Ano, ale jen lehký a většinou ho večer odlíčím.',pts:1},
+   {q:'Chcete pupínky při ošetření všechny vymáčknout?',a:'Kdyby to šlo, byla bych nejradši.',pts:-5}
+  ],
+  diagnoses:[
+   {label:'Problematická / aknózní pleť, ne nutně mastný typ pleti',pts:30,correct:true,msg:'Správně. Lokalizované pupínky a akné neznamenají automaticky, že je celý typ pleti mastný. Důležité je i přesušování domácí péčí.'},
+   {label:'Jednoduše mastná pleť',pts:5,msg:'Mastnota je jen část obrazu. Tváře jsou spíš sušší a klientka pleť navíc přesušuje.'},
+   {label:'Pouze dehydratovaná pleť',pts:5,msg:'Dehydratace může být přítomná, ale nevysvětluje opakované zanícené pupínky.'},
+   {label:'Narušená bariéra bez akné',pts:0,msg:'Přesušení je důležité, ale pupínky jsou skutečnou součástí problému.'},
+   {label:'Pigmentace',pts:-10,msg:'Pigmentace není hlavním problémem této klientky.'}
+  ],
+  treatments:[
+   {label:'Dermalogica Pro Clear',pts:20,correct:true,msg:'Správně. Pro Clear je cílené ošetření pro problematickou, nečistou a aknózní pleť a dává smysl spojit ho s úpravou domácí rutiny.'},
+   {label:'Pouze jednorázové hloubkové vyčištění',pts:5,msg:'Vyčištění může být součástí péče, ale jednorázové „vymačkání všeho“ neřeší celý problém.'},
+   {label:'Intenzivní kyselinový peeling bez dalšího posouzení',pts:-12,msg:'Při přesušující domácí péči není dobré automaticky přidávat další agresivní exfoliaci.'},
+   {label:'Liftingová masáž',pts:-8,msg:'Relaxace je příjemná, ale neřeší hlavní problém.'},
+   {label:'Dermatolog jako jediná možnost',pts:3,msg:'U běžného modelového průběhu není nutné automaticky odesílat klientku k dermatologovi, pokud nejsou varovné známky.'}
+  ],
+  ingredients:[
+   {label:'Niacinamid',good:true},{label:'Kyselina salicylová v rozumné míře',good:true},{label:'Panthenol',good:true},{label:'Beta-glukan',good:true},
+   {label:'Alkoholový vysušující toner',good:false},{label:'Více kyselin každý den',good:false},{label:'Hrubý mechanický peeling',good:false},{label:'Silný retinoid bez tolerance pleti',good:false}
+  ],
+  final:'Problematická / aknózní pleť → Dermalogica Pro Clear → niacinamid, šetrně nastavená kyselina salicylová a zklidňující podpora jako panthenol nebo beta-glukan.',
+  lowHint:'Nenechte se chytit do pasti „pupínky = mastná pleť = všechno vysušit“. Důležité bylo zjistit lokalizaci pupínků, jejich charakter a přesušující domácí rutinu.'
+ },
+ riskAcne:{
+  name:'Případ 4 · Chci vyčistit ty boláky',
+  preview:'Klientka sama žádá silné čištění. Některé projevy ale mohou být za hranicí běžného kosmetického ošetření.',
+  intro:'„Můžete mi to dnes pořádně vyčistit? Tady na čelisti mám několik hrozně bolestivých pupínků.“',
+  questions:[
+   {q:'Jsou pupínky hluboké a bolí i bez doteku?',a:'Ano. Některé jsou jako boule pod kůží a bolí několik dní.',pts:10},
+   {q:'Zůstávají po nich jizvy nebo tmavé stopy?',a:'Ano, po některých mi zůstávají důlky a tmavší místa.',pts:10},
+   {q:'Jak dlouho se tento problém opakuje?',a:'Asi rok. Někdy je to lepší, ale pak se hluboké pupínky zase vrátí.',pts:10},
+   {q:'Máte podobné projevy i jinde než na obličeji?',a:'Občas ano, hlavně na zádech.',pts:8},
+   {q:'Co jste s tím zatím zkoušela?',a:'Hlavně vysušující kosmetiku a mačkání. K dermatologovi jsem zatím nešla.',pts:8},
+   {q:'Máte černé tečky?',a:'Ano, trochu na nose.',pts:1},
+   {q:'Jaký krém používáte?',a:'Lehký gelový, ale často ho vynechávám.',pts:2},
+   {q:'Chcete během ošetření co nejvíc extrakcí?',a:'Ano, myslela jsem, že čím víc se toho vyčistí, tím lépe.',pts:-5}
+  ],
+  diagnoses:[
+   {label:'Varovné známky hlubšího akné – potřeba odborného posouzení',pts:30,correct:true,msg:'Správně. Hluboké bolestivé projevy, jizvení a dlouhé trvání jsou důvodem nepokračovat automaticky běžným kosmetickým čištěním.'},
+   {label:'Běžná mastná pleť s komedony',pts:-10,msg:'Tady nejde jen o mastnotu a pár komedonů. Klíčové jsou hluboké bolestivé projevy a jizvení.'},
+   {label:'Dehydratovaná pleť',pts:-5,msg:'Hydratace může být součástí péče, ale nevysvětluje hlavní problém.'},
+   {label:'Citlivá pleť',pts:0,msg:'Citlivost není hlavním vodítkem.'},
+   {label:'Pigmentace',pts:-10,msg:'Tmavé stopy jsou následkem, ne hlavní příčinou.'}
+  ],
+  treatments:[
+   {label:'Konzultace + doporučení dermatologa podle nálezu',pts:20,correct:true,msg:'Správně. U hlubokých bolestivých a jizvících projevů je bezpečnější odborné posouzení než agresivní kosmetické čištění.'},
+   {label:'Dermalogica Pro Clear bez dalšího posouzení',pts:-8,msg:'Pro Clear je vhodné pro problematickou pleť, ale v tomto případě nejdřív řešíme varovné známky a bezpečnost.'},
+   {label:'Co nejdůkladnější extrakce',pts:-20,msg:'Agresivní manipulace s hlubokými bolestivými projevy může stav zhoršit.'},
+   {label:'Intenzivní peeling',pts:-18,msg:'Bez odborného posouzení by šlo o příliš agresivní první krok.'},
+   {label:'Liftingová masáž',pts:-5,msg:'Neřeší hlavní problém.'}
+  ],
+  ingredients:[
+   {label:'Panthenol',good:true},{label:'Beta-glukan',good:true},{label:'Ceramidy',good:true},{label:'Niacinamid v šetrné koncentraci',good:true},
+   {label:'Vysoká koncentrace AHA',good:false},{label:'Silný domácí retinoid bez vedení',good:false},{label:'Alkoholový toner',good:false},{label:'Hrubý peeling',good:false}
+  ],
+  final:'Hluboké bolestivé a jizvící projevy → nejdřív odborné posouzení / dermatolog → do té doby šetrná bariérová a zklidňující domácí péče, ne agresivní zásahy.',
+  lowHint:'Nejdůležitější nebylo najít „nejlepší čištění“, ale poznat hranici kosmetické péče. Hluboká bolestivá ložiska a jizvení jsou zásadní varovné stopy.'
+ },
+ pigmentation:{
+  name:'Případ 5 · Ty skvrny chci pryč',
+  preview:'Pigmentace po létě svádí k rychlému a silnému řešení. Správná kosmetička ale musí přemýšlet i nad obdobím v roce.',
+  intro:'„Po létě mám na tvářích tmavé fleky. Četla jsem, že kyseliny na pigmentace fungují, tak bych chtěla co nejsilnější peeling.“',
+  questions:[
+   {q:'Kdy se pigmentace zvýraznila?',a:'Nejvíc po létě. Přes prázdniny jsme byli často venku a na dovolené u moře.',pts:10},
+   {q:'Používáte každý den SPF?',a:'Na dovolené ano, ale doma jen když je opravdu slunečno.',pts:10},
+   {q:'Používáte doma kyseliny nebo retinoid?',a:'Občas kyselinové sérum a poslední měsíc jsem přidala i retinoid.',pts:8},
+   {q:'Je pleť teď citlivá nebo podrážděná?',a:'Trochu mě někdy štípe po séru, jinak většinou ne.',pts:6},
+   {q:'Jak dlouho skvrny máte?',a:'Některé už asi rok, ale po létě jsou mnohem tmavší.',pts:8},
+   {q:'Chcete výsledek co nejrychleji?',a:'Ano, ideálně bych je chtěla zesvětlit hned.',pts:2},
+   {q:'Jaký používáte make-up?',a:'Lehký tónovací krém.',pts:0},
+   {q:'Máte ráda opalování?',a:'Ano, mám ráda, když jsem trochu opálená.',pts:3}
+  ],
+  diagnoses:[
+   {label:'Hyperpigmentace se silnou vazbou na UV expozici',pts:30,correct:true,msg:'Správně. Klíčové jsou zhoršení po létě, nepravidelné SPF a potřeba plánovat korekční péči s ohledem na sezónu a toleranci pleti.'},
+   {label:'Suchá pleť',pts:0,msg:'Suchost není hlavním problémem.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Akné zde není hlavní téma.'},
+   {label:'Narušená bariéra jako jediný problém',pts:5,msg:'Mírné štípání je důležité, ale hlavní problém je pigmentace.'},
+   {label:'Pouze věkové skvrny, sezóna není důležitá',pts:-8,msg:'Sezóna a UV ochrana jsou pro plán pigmentační péče zásadní.'}
+  ],
+  treatments:[
+   {label:'Ošetření Expert na míru + plán podle sezóny',pts:20,correct:true,msg:'Správně. Expert může podle aktuálního stavu zvolit vhodnou kombinaci postupů; intenzivnější peeling se nevolí automaticky bez ohledu na sezónu a toleranci pleti.'},
+   {label:'Nejsilnější chemický peeling hned dnes',pts:-20,msg:'To ignoruje současnou UV expozici, domácí aktivní látky i aktuální toleranci pleti.'},
+   {label:'Nanojehličkování jako samostatná univerzální služba',pts:-8,msg:'Nanojehličkování u Le Fler není samostatná hlavní procedura; může být součástí Ošetření Expert podle posouzení.'},
+   {label:'SQT jako automaticky první volba',pts:3,msg:'SQT může být alternativní nebo další krok, ale nemá být automatickým hlavním výsledkem bez odborného posouzení.'},
+   {label:'Pouze relaxační masáž',pts:-5,msg:'Příjemná, ale neřeší hlavní cíl klientky.'}
+  ],
+  ingredients:[
+   {label:'Vitamin C',good:true},{label:'Niacinamid',good:true},{label:'Kyselina tranexamová',good:true},{label:'Kyselina azelaová',good:true},
+   {label:'Vysoká koncentrace AHA každý den',good:false},{label:'Alkoholový toner',good:false},{label:'Hrubý peeling',good:false},{label:'Více silných aktiv najednou',good:false}
+  ],
+  final:'Hyperpigmentace po UV expozici → Ošetření Expert a plán s ohledem na sezónnost → vitamin C, niacinamid, kyselina tranexamová nebo azelaová + důsledné SPF jako základ rutiny.',
+  lowHint:'U pigmentací nestačí vědět, co je „silné“. Důležité byly UV expozice, SPF, domácí aktivní látky a období v roce.'
+ },
+ antiage:{
+  name:'Případ 6 · Nechci vypadat na třicet',
+  preview:'Klientka nechce radikální anti-age. Dokážete respektovat její skutečný cíl místo automatického nasazení nejsilnější procedury?',
+  intro:'„Je mi 47 a nechci vypadat na třicet. Jen mám pocit, že obličej začíná být unavený a trochu povoluje.“',
+  questions:[
+   {q:'Co vám na pleti vadí úplně nejvíc?',a:'Spíš unavený výraz a povolenější kontury. Vrásky mi vlastně tolik nevadí.',pts:10},
+   {q:'Chcete výraznou korekci, nebo spíš dlouhodobě udržovat dobrý stav?',a:'Jednoznačně udržovat. Nechci nic agresivního.',pts:10},
+   {q:'Je pro vás důležitá i relaxace?',a:'Ano, dost. Mám stresující práci a kosmetiku beru i jako čas pro sebe.',pts:10},
+   {q:'Jak se pleť cítí po běžné péči?',a:'Celkem dobře, není výrazně citlivá ani suchá.',pts:6},
+   {q:'Vadí vám pigmentace?',a:'Mám pár flíčků, ale není to hlavní důvod, proč jsem přišla.',pts:5},
+   {q:'Používáte doma aktivní anti-age péči?',a:'Ano, něco s peptidy a večer občas retinoid.',pts:5},
+   {q:'Chcete co nejrychlejší změnu?',a:'Ne. Spíš aby pleť dlouhodobě vypadala dobře.',pts:8},
+   {q:'Kolik vrásek máte na čele?',a:'Nevím, nikdy jsem je nepočítala.',pts:-3}
+  ],
+  diagnoses:[
+   {label:'Anti-age udržování / „konzervace“ s důrazem na komfort',pts:30,correct:true,msg:'Správně. Klientka nechce agresivní korekci; jejím cílem je udržování, svěží vzhled, kontury a relaxace.'},
+   {label:'Výrazné fotoaging vyžadující intenzivní zásah',pts:-8,msg:'Pár flíčků a vrásky nejsou důvodem ignorovat přání klientky.'},
+   {label:'Dehydratace jako hlavní problém',pts:0,msg:'Pleť se necítí výrazně suchá ani napjatá.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Akné zde není přítomné.'},
+   {label:'Pigmentace jako jediná priorita',pts:3,msg:'Pigmentace je vedlejší téma, ne hlavní motivace klientky.'}
+  ],
+  treatments:[
+   {label:'ProSkin na míru nebo liftingová masáž podle preference klientky',pts:20,correct:true,msg:'Správně. Obě varianty respektují cíl udržovat pleť v dobré kondici; podle priority lze zvolit více kosmetickou nebo více relaxační cestu.'},
+   {label:'Mikrojehličkování automaticky kvůli věku',pts:-12,msg:'Věk sám o sobě není indikace k nejintenzivnější proceduře.'},
+   {label:'Nejsilnější peeling',pts:-15,msg:'To neodpovídá cíli klientky ani jejímu přání nevolit agresivní zásah.'},
+   {label:'Liftingová masáž + biostimulační laser jako volitelný doplněk',pts:15,msg:'Velmi dobrá volba, zvlášť pokud klientka upřednostní relaxaci a jemný liftingový efekt.'},
+   {label:'Dermatolog',pts:0,msg:'V modelovém případu nejsou varovné známky.'}
+  ],
+  ingredients:[
+   {label:'Peptidy',good:true},{label:'Vitamin C',good:true},{label:'Kyselina hyaluronová',good:true},{label:'Retinoid podle tolerance',good:true},
+   {label:'Alkoholový toner',good:false},{label:'Každodenní silný AHA peeling',good:false},{label:'Hrubý peeling',good:false},{label:'Vysušující přípravky na akné',good:false}
+  ],
+  final:'Anti-age udržování / „konzervace“ → ProSkin na míru nebo liftingová masáž; biostimulační laser může být doplňkem → peptidy, vitamin C, hydratace a případně retinoid podle tolerance.',
+  lowHint:'Největší past byla řešit věk místo přání klientky. Řekla vám sama, že nechce radikální korekci a že je pro ni důležitý komfort a dlouhodobé udržování.'
+ },
+ wedding:{
+  name:'Případ 7 · Za deset dní se vdávám',
+  preview:'Klientka chce před důležitou událostí „něco opravdu účinného“. Jenže nejlepší výkon někdy znamená hlavně neriskovat.',
+  intro:'„Za deset dní máme svatbu. Potřebuju vypadat svěže, ale hlavně nechci riskovat, že budu červená nebo se budu loupat.“',
+  questions:[
+   {q:'Co je pro vás před svatbou nejdůležitější?',a:'Rozjasnit, hydratovat a vypadat odpočatě. Nechci žádný výpadek ani překvapení.',pts:10},
+   {q:'Máte zkušenost s intenzivními peelingy nebo jehličkováním?',a:'Ne, nikdy jsem nic takového nezkoušela.',pts:10},
+   {q:'Je pleť teď podrážděná nebo citlivá?',a:'Ne, jen bývá trochu sušší a unavená.',pts:6},
+   {q:'Kolik času zbývá do události?',a:'Deset dní. Pak už nechci nic riskovat.',pts:10},
+   {q:'Chcete hlavně okamžitý vzhled, nebo dlouhodobou změnu struktury pleti?',a:'Teď hlavně okamžitě vypadat dobře. Dlouhodobou péči můžeme řešit po svatbě.',pts:10},
+   {q:'Používáte pravidelně SPF?',a:'Ano, každý den.',pts:4},
+   {q:'Máte černé tečky?',a:'Trochu na nose, ale vůbec mě teď netrápí.',pts:1},
+   {q:'Chcete co nejsilnější ošetření?',a:'Jen pokud mi zaručí, že nebudu červená. Což asi nejde, že?',pts:-3}
+  ],
+  diagnoses:[
+   {label:'Předudálostní péče – hydratace, rozjasnění a minimum rizika',pts:30,correct:true,msg:'Správně. Časový horizont a požadavek na nulový downtime jsou pro rozhodnutí důležitější než touha po „silném“ zásahu.'},
+   {label:'Pigmentace vyžadující okamžitý peeling',pts:-8,msg:'Pigmentace není hlavní motivace a intenzivní procedura krátce před svatbou zbytečně zvyšuje riziko.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Pár komedonů na nose nejsou hlavním problémem.'},
+   {label:'Výrazné anti-age změny',pts:-5,msg:'Klientka chce především svěží vzhled před událostí.'},
+   {label:'Citlivá pleť',pts:0,msg:'Pleť aktuálně nevykazuje významnou citlivost.'}
+  ],
+  treatments:[
+   {label:'ProSkin na míru zaměřený na hydrataci a rozjasnění',pts:20,correct:true,msg:'Správně. Volíme předvídatelné ošetření s nízkým rizikem reakce a bez experimentování těsně před událostí.'},
+   {label:'První mikrojehličkování v životě',pts:-20,msg:'Krátce před svatbou není vhodná chvíle testovat intenzivní proceduru, kterou klientka nikdy neabsolvovala.'},
+   {label:'Silný kyselinový peeling',pts:-18,msg:'Riziko zarudnutí nebo olupování je v rozporu s hlavním cílem klientky.'},
+   {label:'Liftingová masáž',pts:12,msg:'Může být velmi příjemnou a bezpečnou variantou, pokud klientka upřednostní odpočatý vzhled a relaxaci.'},
+   {label:'SQT automaticky',pts:-8,msg:'Intenzivní procedura není automaticky nejlepší volba těsně před důležitou událostí.'}
+  ],
+  ingredients:[
+   {label:'Glycerin',good:true},{label:'Kyselina hyaluronová',good:true},{label:'Panthenol',good:true},{label:'Beta-glukan',good:true},
+   {label:'Nový silný retinoid',good:false},{label:'Vysoká koncentrace AHA',good:false},{label:'Hrubý peeling',good:false},{label:'Alkoholový toner',good:false}
+  ],
+  final:'Před svatbou → bezpečné hydratační a rozjasňující ProSkin na míru, případně liftingová masáž → glycerin, kyselina hyaluronová, panthenol nebo beta-glukan. Žádné experimenty těsně před událostí.',
+  lowHint:'Tady rozhodoval hlavně čas. Deset dní před svatbou není cílem ukázat, jak intenzivní proceduru umíme, ale minimalizovat riziko a dodat předvídatelný efekt.'
+ },
+ falseSensitive:{
+  name:'Případ 8 · Já mám strašně citlivou pleť',
+  preview:'Klientka přichází s hotovou diagnózou. Vaším úkolem je zjistit, co přesně slovem „citlivá“ myslí.',
+  intro:'„Já mám strašně citlivou pleť. Vždycky říkám kosmetičce, že na mě nesmí skoro nic použít.“',
+  questions:[
+   {q:'Co přesně se stane, když pleť reaguje?',a:'Hlavně zčervenám. Třeba při masáži nebo když je mi teplo.',pts:10},
+   {q:'Pálí, svědí nebo štípe vás pleť běžně?',a:'Ne, skoro nikdy. Spíš se jen rychle začervenám.',pts:10},
+   {q:'Jak dlouho zarudnutí obvykle trvá?',a:'Většinou deset nebo dvacet minut a pak samo zmizí.',pts:10},
+   {q:'Snášíte běžné krémy a séra?',a:'Ano. Většinu kosmetiky snáším bez problémů.',pts:10},
+   {q:'Máte viditelné cévky nebo trvalé zarudnutí?',a:'Ne, nic takového jsem si nevšimla.',pts:8},
+   {q:'Loupe se nebo pne pleť?',a:'Ne, většinou je docela v pohodě.',pts:4},
+   {q:'Jakou značku používáte?',a:'Střídám dvě značky.',pts:0},
+   {q:'Řekl vám někdy někdo, že máte citlivou pleť?',a:'Spíš jsem si to řekla sama, protože vždycky rychle zčervenám.',pts:5}
+  ],
+  diagnoses:[
+   {label:'Reaktivní / snadno se červenající pleť bez jasných známek narušené bariéry',pts:30,correct:true,msg:'Správně. Přechodné začervenání samo o sobě není totéž jako trvale citlivá nebo narušená pleť.'},
+   {label:'Těžce citlivá pleť s narušenou bariérou',pts:-10,msg:'Chybí pálení, štípání, olupování, intolerance kosmetiky i trvalé zarudnutí.'},
+   {label:'Rosacea',pts:3,msg:'Je správné na ni myslet při trvalém zarudnutí či cévkách, ale popis klientky tomu v tomto modelu neodpovídá.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Akné zde není přítomné.'},
+   {label:'Dehydratovaná pleť',pts:0,msg:'Pnutí ani známky nedostatku vody nejsou hlavní stížností.'}
+  ],
+  treatments:[
+   {label:'ProSkin na míru podle skutečného nálezu, ne podle nálepky „citlivá“',pts:20,correct:true,msg:'Správně. Ošetření přizpůsobíme reálnému stavu pleti a její toleranci.'},
+   {label:'Pouze ultra-zklidňující režim bez aktivní péče',pts:5,msg:'Není to nebezpečné, ale může to být zbytečně opatrné, pokud pleť běžnou kosmetiku dobře snáší.'},
+   {label:'Intenzivní peeling jen proto, abychom otestovali reakci',pts:-20,msg:'Citlivost se rozhodně netestuje agresivním zákrokem.'},
+   {label:'Dermatolog automaticky',pts:0,msg:'Při trvalém zarudnutí nebo cévkách by byl vhodný, ale v tomto modelu nejsou varovné známky.'},
+   {label:'Hloubkové čištění',pts:-5,msg:'Není k němu hlavní důvod.'}
+  ],
+  ingredients:[
+   {label:'Panthenol',good:true},{label:'Beta-glukan',good:true},{label:'Niacinamid v dobře tolerované koncentraci',good:true},{label:'Kyselina hyaluronová',good:true},
+   {label:'Vysoká koncentrace AHA',good:false},{label:'Alkoholový toner',good:false},{label:'Hrubý peeling',good:false},{label:'Více nových aktiv současně',good:false}
+  ],
+  final:'Přechodná reaktivita není automaticky narušená citlivá pleť → ProSkin na míru podle skutečného nálezu → šetrná hydratace a zklidnění podle tolerance.',
+  lowHint:'Nejdůležitější bylo nepřevzít klientčinu vlastní nálepku. Otázka „co přesně znamená citlivá?“ by vás rychle dovedla ke správnému směru.'
+ },
+ relaxLift:{
+  name:'Případ 9 · Chci hlavně vypnout obličej',
+  preview:'Vrásky vás mohou svádět k technologickému anti-age. Klientka vám ale možná říká úplně jinou prioritu.',
+  intro:'„Kosmetiku doma mám dobrou. Spíš mám pocit, že jsem pořád unavená a obličej mi nějak spadl. A potřebovala bych si konečně hodinu odpočinout.“',
+  questions:[
+   {q:'Co je pro vás dnes důležitější – intenzivní korekce, nebo relaxace?',a:'Určitě relaxace. Když budu navíc vypadat svěžeji, budu nadšená.',pts:10},
+   {q:'Co myslíte tím, že obličej „spadl“?',a:'Přijde mi, že jsou kontury méně pevné a tvář vypadá unaveně.',pts:10},
+   {q:'Trápí vás výrazně pigmentace nebo akné?',a:'Ne. Mám normální známky věku, ale nic zásadního.',pts:8},
+   {q:'Jak pleť snáší běžnou kosmetiku?',a:'Dobře, nemám s ní větší problémy.',pts:5},
+   {q:'Chcete proceduru bez výrazného downtime?',a:'Ano. Ideálně odejít a normálně fungovat.',pts:8},
+   {q:'Máte ráda masáže obličeje?',a:'Ano, právě kvůli tomu jsem si říkala, že bych něco takového chtěla.',pts:10},
+   {q:'Máte jednu konkrétní vrásku, kterou chcete odstranit?',a:'Ne, to vůbec. Jde mi o celkový pocit a výraz.',pts:6},
+   {q:'Kolik produktů máte doma?',a:'Asi šest nebo sedm.',pts:0}
+  ],
+  diagnoses:[
+   {label:'Relax + jemný anti-age / liftingový cíl',pts:30,correct:true,msg:'Správně. Klientka jasně říká, že hlavní potřebou je relaxace, odpočatý vzhled a jemná práce s konturami.'},
+   {label:'Intenzivní anti-age rekonstrukce',pts:-8,msg:'Neodpovídá přání klientky ani absenci výrazného problému.'},
+   {label:'Pigmentace',pts:-10,msg:'Pigmentace není hlavní téma.'},
+   {label:'Aknózní pleť',pts:-10,msg:'Akné zde není přítomné.'},
+   {label:'Narušená bariéra',pts:0,msg:'Pleť běžnou péči snáší dobře.'}
+  ],
+  treatments:[
+   {label:'Liftingová masáž',pts:20,correct:true,msg:'Správně. Přesně odpovídá prioritě klientky: relaxace, práce s konturami a svěžejší výraz bez downtime.'},
+   {label:'Liftingová masáž + biostimulační laser jako doplněk',pts:17,msg:'Výborná varianta, pokud klientka chce přidat technologický doplněk. Laser není samostatná hlavní větev, ale může ošetření doplnit.'},
+   {label:'Mikrojehličkování',pts:-10,msg:'Může mít své místo u jiných cílů, ale tady by ignorovalo hlavní přání klientky.'},
+   {label:'Pro Clear',pts:-12,msg:'Pro problematickou pleť zde není důvod.'},
+   {label:'Intenzivní kyselinový peeling',pts:-12,msg:'Neodpovídá hlavnímu cíli ani preferenci procedury bez downtime.'}
+  ],
+  ingredients:[
+   {label:'Peptidy',good:true},{label:'Kyselina hyaluronová',good:true},{label:'Vitamin C',good:true},{label:'Skvalan',good:true},
+   {label:'Alkoholový toner',good:false},{label:'Silná každodenní AHA exfoliace',good:false},{label:'Vysušující přípravky na akné',good:false},{label:'Hrubý peeling',good:false}
+  ],
+  final:'Relax + jemný liftingový anti-age cíl → liftingová masáž; biostimulační laser lze přidat podle potřeby → peptidy, hydratace, antioxidanty nebo skvalan.',
+  lowHint:'Klientka vám řešení skoro řekla sama. Chtěla odpočívat, ne podstupovat nejintenzivnější anti-age proceduru.'
+ },
+ allergyClue:{
+  name:'Případ 10 · Pupínky, které nejsou jako obvykle',
+  preview:'Klientka přichází „na akné“, ale projevy svědí, objevují se nárazově a mají podezřelou souvislost s jídlem.',
+  intro:'„Poslední dobou se mi kolem pusy a na tvářích dělají malé červené pupínky. Zkusila jsem salicylovou kyselinu, ale spíš to pálí a někdy svědí.“',
+  questions:[
+   {q:'Svědí nebo pálí tyto projevy?',a:'Ano. Někdy docela svědí a po kyselině pálí mnohem víc.',pts:10},
+   {q:'Objevují se pořád, nebo spíš nárazově?',a:'Spíš nárazově. Jeden den je pleť skoro v pořádku a pak se to najednou rozjede.',pts:10},
+   {q:'Všimla jste si souvislosti s jídlem nebo jinou situací?',a:'Teď když se ptáte… někdy je to horší po mléčných výrobcích. A párkrát i po některém jídle, které běžně nejím.',pts:10},
+   {q:'Máte nějaké známé alergie?',a:'Mám pylovou alergii. Nikdy mě ale nenapadlo, že by něco mohlo souviset i s jídlem.',pts:10},
+   {q:'Máte při zhoršení i jiné příznaky?',a:'Občas mě svědí rty nebo mám pocit, že je okolí úst podrážděnější. Zažívání mám někdy také citlivější.',pts:8},
+   {q:'Jsou pupínky hluboké a bolestivé jako akné?',a:'Ne. Jsou spíš drobné, červené a svědivé.',pts:8},
+   {q:'Máte černé tečky?',a:'Pár na nose, ale s těmi červenými pupínky to vypadá úplně jinak.',pts:3},
+   {q:'Chcete dnes silný peeling?',a:'Myslela jsem, že ano, ale když mě to teď pálí, už si nejsem jistá.',pts:-5}
+  ],
+  diagnoses:[
+   {label:'Podezření na nekosmetickou reakci – možná alergická / jiná systémová souvislost',pts:30,correct:true,msg:'Správně. Svědění, nárazový průběh, odlišný vzhled od běžného akné a souvislost s jídlem jsou důvodem nepřisuzovat projevy automaticky akné.'},
+   {label:'Běžné akné',pts:-15,msg:'Svědění, nárazový průběh a vazba na jídlo do typického obrazu běžného akné dobře nezapadají.'},
+   {label:'Mastná pleť',pts:-10,msg:'Mastnota nevysvětluje svědivé nárazové projevy.'},
+   {label:'Dehydratace',pts:0,msg:'Podráždění po kyselině může zvyšovat citlivost, ale nevysvětluje celý průběh.'},
+   {label:'Laktózová intolerance potvrzená kosmetičkou',pts:-20,msg:'Kosmetička nemá diagnostikovat potravinovou intoleranci ani alergii. Navíc laktóza a alergie na mléčné bílkoviny nejsou totéž.'}
+  ],
+  treatments:[
+   {label:'Neprovádět agresivní zákrok + doporučit lékařské / alergologické posouzení',pts:20,correct:true,msg:'Správně. Úkolem kosmetičky je rozpoznat neobvyklou stopu, ne určit konkrétní potravinovou diagnózu.'},
+   {label:'Dermalogica Pro Clear a intenzivní čištění',pts:-15,msg:'Pokud projevy nejsou typické pro akné a svědí, agresivní aknózní protokol není vhodný první krok.'},
+   {label:'Silný kyselinový peeling',pts:-20,msg:'Při pálení a podezření na jiný typ reakce by mohl stav výrazně zhoršit.'},
+   {label:'Říct klientce, ať vysadí laktózu',pts:-15,msg:'To by byla nepodložená diagnóza a dietní doporučení mimo kompetenci kosmetičky.'},
+   {label:'Šetrná péče až podle aktuálního stavu a po vyjasnění příčiny',pts:12,msg:'Bezpečný směr, ale důležité je současně doporučit odborné posouzení opakující se souvislosti.'}
+  ],
+  ingredients:[
+   {label:'Ceramidy',good:true},{label:'Panthenol',good:true},{label:'Beta-glukan',good:true},{label:'Skvalan',good:true},
+   {label:'Vysoká koncentrace kyseliny salicylové',good:false},{label:'Silný retinoid',good:false},{label:'Alkoholový toner',good:false},{label:'Vysoká koncentrace AHA',good:false}
+  ],
+  final:'Atypické svědivé nárazové pupínky s možnou vazbou na jídlo → neagresivní kosmetický postup a doporučení lékařského / alergologického posouzení → do vyjasnění jen jednoduchá zklidňující bariérová péče.',
+  lowHint:'Hra vás chtěla nalákat na akné. Rozhodující ale bylo svědění, nárazový průběh, jiný charakter pupínků a možná vazba na jídlo. Kosmetička má tuto stopu rozpoznat, ne určit konkrétní alergii.'
+ }
+
+};
+
+let current=null;
+const state={score:0,asked:0,diagnosisDone:false,treatmentDone:false,qaLog:[]};
+
+function shuffle(items){
+ const arr=[...items];
+ for(let i=arr.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+ }
+ return arr;
+}
+
+function escapeHtml(value){
+ return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#039;"}[ch]));
+}
+
+function renderConsultLog(){
+ if(!current)return;
+ $('#logIntro').innerHTML='<span class="logRole">Klientka při příchodu:</span> '+escapeHtml(current.intro);
+ const entries=$('#logEntries');
+ if(!state.qaLog.length){entries.innerHTML='<div class="logEmpty">Zatím jste nepoložili žádnou otázku.</div>';return;}
+ entries.innerHTML=state.qaLog.map((item,n)=>
+  '<div class="logEntry"><span class="logRole">'+(n+1)+'. Kosmetička:</span> '+escapeHtml(item.q)+
+  '<br><span class="logRole">Klientka:</span> „'+escapeHtml(item.a)+'“</div>'
+ ).join('');
+}
+
+function hideAll(){['#intro','#questionsStage','#diagnosisStage','#treatmentStage','#homeStage','#resultStage'].forEach(id=>$(id).classList.add('hidden'));}
+function setScore(v){state.score=v;$('#score').textContent=state.score;}
+function addScore(v){setScore(state.score+v);}
+function show(id){$(id).classList.remove('hidden');}
+function hide(id){$(id).classList.add('hidden');}
+
+function renderCaseSelect(){
+ const grid=$('#caseGrid');grid.innerHTML='';
+ Object.entries(cases).forEach(([key,c])=>{
+  const box=document.createElement('div');box.className='case-card';
+  const h=document.createElement('h3');h.textContent=c.name;
+  const p=document.createElement('p');p.textContent=c.preview;
+  const b=document.createElement('button');b.type='button';b.textContent='Hrát tento případ';b.addEventListener('click',()=>selectCase(key));
+  box.append(h,p,b);grid.appendChild(box);
+ });
+}
+function resetState(){state.score=0;state.asked=0;state.diagnosisDone=false;state.treatmentDone=false;state.qaLog=[];setScore(0);$('#askedCount').textContent='0';$('#clientAnswer').classList.add('hidden');$('#diagnosisFeedback').classList.add('hidden');$('#treatmentFeedback').classList.add('hidden');$('#homeFeedback').classList.add('hidden');$('#diagnoseBtn').textContent='Mám dost informací → stanovit diagnózu';$('#finishBtn').disabled=false;$('#consultLog').classList.add('hidden');$('#logEntries').innerHTML='<div class="logEmpty">Zatím jste nepoložili žádnou otázku.</div>';}
+function selectCase(key){current=cases[key];resetState();hide('#caseSelect');hideAll();$('#caseName').textContent=current.name;$('#clientIntro').textContent=current.intro;renderQuestions();renderDiagnosis();renderTreatment();renderIngredients();renderConsultLog();show('#intro');}
+
+function renderQuestions(){
+ const grid=$('#questionGrid');grid.innerHTML='';
+ shuffle(current.questions.map((item,i)=>({item,i}))).forEach(({item,i})=>{
+  const b=document.createElement('button');b.type='button';b.className='optionBtn';b.textContent=item.q;b.addEventListener('click',()=>askQuestion(i,b));grid.appendChild(b);
+ });
+}
+function askQuestion(i,button){
+ if(state.asked>=4||button.disabled)return;
+ const item=current.questions[i];button.disabled=true;state.asked++;state.qaLog.push({q:item.q,a:item.a});renderConsultLog();addScore(item.pts);$('#askedCount').textContent=state.asked;
+ const cls=item.pts>0?'plus':item.pts<0?'minus':'zero',sign=item.pts>0?'+':'';
+ const box=$('#clientAnswer');box.innerHTML='<strong>Klientka:</strong> „'+item.a+'“<div class="delta '+cls+'">'+sign+item.pts+' bodů</div>';box.classList.remove('hidden');
+ if(state.asked>=4){[...$('#questionGrid').querySelectorAll('button')].forEach(b=>b.disabled=true);$('#diagnoseBtn').textContent='4 otázky položeny → stanovit diagnózu';}
+}
+function renderDiagnosis(){
+ const box=$('#diagnosisOptions');box.innerHTML='';
+ shuffle(current.diagnoses).forEach(d=>{const b=document.createElement('button');b.type='button';b.className='optionBtn';b.textContent=d.label;b.addEventListener('click',()=>chooseDiagnosis(d));box.appendChild(b);});
+}
+function chooseDiagnosis(d){
+ if(state.diagnosisDone)return;state.diagnosisDone=true;addScore(d.pts);[...$('#diagnosisOptions').querySelectorAll('button')].forEach(b=>b.disabled=true);
+ const fb=$('#diagnosisFeedback');fb.classList.remove('hidden');fb.innerHTML='<strong>'+(d.correct?'Správná diagnóza.':'Vyhodnocení:')+'</strong> '+d.msg+' <span class="delta '+(d.pts>0?'plus':d.pts<0?'minus':'zero')+'">'+(d.pts>0?'+':'')+d.pts+' bodů</span>';setTimeout(()=>show('#treatmentStage'),250);
+}
+function renderTreatment(){
+ const box=$('#treatmentOptions');box.innerHTML='';
+ shuffle(current.treatments).forEach(t=>{const b=document.createElement('button');b.type='button';b.className='optionBtn';b.textContent=t.label;b.addEventListener('click',()=>chooseTreatment(t));box.appendChild(b);});
+}
+function chooseTreatment(t){
+ if(state.treatmentDone)return;state.treatmentDone=true;addScore(t.pts);[...$('#treatmentOptions').querySelectorAll('button')].forEach(b=>b.disabled=true);
+ const fb=$('#treatmentFeedback');fb.classList.remove('hidden');fb.innerHTML='<strong>'+(t.correct?'Správné ošetření.':'Vyhodnocení:')+'</strong> '+t.msg+' <span class="delta '+(t.pts>0?'plus':t.pts<0?'minus':'zero')+'">'+(t.pts>0?'+':'')+t.pts+' bodů</span>';setTimeout(()=>show('#homeStage'),250);
+}
+function renderIngredients(){
+ const box=$('#ingredientGrid');box.innerHTML='';
+ shuffle(current.ingredients.map((it,i)=>({it,i}))).forEach(({it,i})=>{const lab=document.createElement('label');lab.className='check';lab.innerHTML='<input type="checkbox" value="'+i+'"><span>'+it.label+'</span>';box.appendChild(lab);});
+ box.onchange=()=>{const checked=[...box.querySelectorAll('input:checked')];if(checked.length>3)checked[checked.length-1].checked=false;};
+}
+function finishHome(){
+ const selected=[...$('#ingredientGrid').querySelectorAll('input:checked')];if(selected.length!==3){alert('Vyberte přesně 3 účinné látky.');return;}
+ let pts=0,good=0,bad=0;selected.forEach(inp=>{const it=current.ingredients[Number(inp.value)];if(it.good){pts+=4;good++;}else{pts-=3;bad++;}});addScore(pts);
+ [...$('#ingredientGrid').querySelectorAll('input')].forEach(i=>i.disabled=true);$('#finishBtn').disabled=true;
+ const fb=$('#homeFeedback');fb.classList.remove('hidden');fb.innerHTML='<strong>Domácí péče:</strong> '+good+' vhodné volby, '+bad+' nevhodné. <span class="delta '+(pts>0?'plus':pts<0?'minus':'zero')+'">'+(pts>0?'+':'')+pts+' bodů</span>';setTimeout(showFinal,250);
+}
+function showFinal(){
+ show('#resultStage');const final=Math.max(0,Math.min(100,state.score));$('#finalScore').textContent=final;let title,text;
+ if(final>=90){title='Výborná konzultace';text='Skvěle jste vytěžili důležité informace a zvolili správný postup.';}
+ else if(final>=75){title='Velmi dobrá práce';text='Hlavní směr byl správný, ale několik otázek nebo doporučení šlo zpřesnit.';}
+ else if(final>=55){title='Dobrý základ';text='K řešení jste se přiblížili, ale část informací nebo doporučení byla méně přesná.';}
+ else{title='Ještě to chce praxi';text=current.lowHint;}
+ $('#resultTitle').textContent=title;$('#resultText').innerHTML=text+'<br><br><strong>Správný závěr:</strong> '+current.final;$('#resultStage').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function backToCases(){current=null;resetState();hideAll();hide('#consultLog');show('#caseSelect');window.scrollTo({top:0,behavior:'smooth'});}
+
+$('#startBtn').addEventListener('click',()=>{hide('#intro');show('#consultLog');show('#questionsStage');});
+$('#diagnoseBtn').addEventListener('click',()=>{hide('#questionsStage');show('#diagnosisStage');});
+$('#finishBtn').addEventListener('click',finishHome);
+$('#restartBtn').addEventListener('click',backToCases);
+renderCaseSelect();
+})();
+</script>
+</body>
+</html>
